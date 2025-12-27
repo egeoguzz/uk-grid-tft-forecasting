@@ -1,35 +1,34 @@
 import torch
+import numpy as np
 from pytorch_forecasting import TemporalFusionTransformer
 from pytorch_forecasting.metrics import QuantileLoss
 
 
 class TFTModelBuilder:
     """
-    Handles the initialization and configuration of the Temporal Fusion Transformer (TFT) architecture.
-    References: ArXiv:1912.09363
+    Builder class for the Temporal Fusion Transformer (TFT) architecture.
+    Implements state-of-the-art time series forecasting with attention mechanisms.
     """
 
     def __init__(self, training_dataset):
         self.training_dataset = training_dataset
         self.model = None
 
-    def build_model(self, hidden_size: int = 16, attention_heads: int = 4,
-                    dropout: float = 0.1) -> TemporalFusionTransformer:
+    def build_model(self, hidden_size: int = 16, attention_heads: int = 4, dropout: float = 0.1):
         """
-        Configures the TFT model parameters based on the dataset properties.
+        Configures and initializes the TFT model.
 
         Args:
-            hidden_size: Hidden dimension for the LSTM and attention layers.
-            attention_heads: Number of attention heads for the multi-head attention block.
-            dropout: Dropout rate for regularization.
+            hidden_size (int): Size of the internal neural network layers.
+            attention_heads (int): Number of attention heads for multi-head attention.
+            dropout (float): Dropout rate for regularization.
 
         Returns:
-            Initialized TemporalFusionTransformer model.
+            TemporalFusionTransformer: The initialized model.
         """
-        # Determine the available hardware accelerator
+        # Hardware acceleration check
         device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        print(f"Initializing TFT architecture on device: {device.upper()}")
+        print(f"[INFO] Initializing TFT architecture on device: {device.upper()}")
 
         self.model = TemporalFusionTransformer.from_dataset(
             self.training_dataset,
@@ -38,9 +37,9 @@ class TFTModelBuilder:
             attention_head_size=attention_heads,
             dropout=dropout,
             hidden_continuous_size=8,
-            output_size=7,  # Quantiles: 0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98
+            output_size=7,
             loss=QuantileLoss(),
-            log_interval=10,
+            log_interval=0,
             reduce_on_plateau_patience=4,
         )
 
@@ -48,11 +47,11 @@ class TFTModelBuilder:
         return self.model
 
     def _log_model_summary(self):
-        """Internal method to log architectural details."""
+        """Logs the architectural details and parameter count."""
         if self.model:
             params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-            print("Model Architecture Summary:")
-            print(f" - Hidden Size: {self.model.hparams.hidden_size}")
-            print(f" - Attention Heads: {self.model.hparams.attention_head_size}")
-            print(f" - Trainable Parameters: {params:,}")
-            print(f" - Loss Function: QuantileLoss")
+            print("--- Model Architecture Summary ---")
+            print(f" --> Hidden Size: {self.model.hparams.hidden_size}")
+            print(f" --> Attention Heads: {self.model.hparams.attention_head_size}")
+            print(f" --> Trainable Parameters: {params:,}")
+            print(f" --> Loss Function: QuantileLoss (Probabilistic)")
