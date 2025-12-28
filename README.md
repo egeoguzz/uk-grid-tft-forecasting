@@ -44,12 +44,3 @@ Feature importance analysis confirms that the model relies on logical dependenci
 ### Prerequisites
 * Python 3.9+
 * Virtual environment recommended
-
-### Installation
-
-```bash
-git clone [https://github.com/egeoguzz/uk-grid-tft-forecasting.git](https://github.com/egeoguzz/uk-grid-tft-forecasting.git)
-cd uk-grid-tft-forecasting
-pip install -r requirements.txt
-
-Batch Size: 64
