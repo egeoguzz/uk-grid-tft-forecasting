@@ -14,14 +14,14 @@ class TFTModelBuilder:
         self.training_dataset = training_dataset
         self.model = None
 
-    def build_model(self, hidden_size: int = 16, attention_heads: int = 4, dropout: float = 0.1):
+    def build_model(self, hidden_size: int = 32, attention_heads: int = 4, dropout: float = 0.3):
         """
         Configures and initializes the TFT model.
 
         Args:
-            hidden_size (int): Size of the internal neural network layers.
-            attention_heads (int): Number of attention heads for multi-head attention.
-            dropout (float): Dropout rate for regularization.
+            hidden_size (int): Size of the internal neural network layers. Increased to 32 for better capacity.
+            attention_heads (int): Number of attention heads.
+            dropout (float): Dropout rate (0.3) to prevent overfitting and improve generalization.
 
         Returns:
             TemporalFusionTransformer: The initialized model.
@@ -32,14 +32,21 @@ class TFTModelBuilder:
 
         self.model = TemporalFusionTransformer.from_dataset(
             self.training_dataset,
-            learning_rate=0.03,
+            # OPTIMIZATION PARAMETERS:
+            # Lower learning rate (0.001) ensures smoother convergence and prevents
+            # the model from getting stuck in local minima too early.
+            learning_rate=0.001,
+
             hidden_size=hidden_size,
             attention_head_size=attention_heads,
             dropout=dropout,
-            hidden_continuous_size=8,
-            output_size=7,
+            hidden_continuous_size=16,
+            output_size=7,  # Predicting 7 quantiles for uncertainty estimation
             loss=QuantileLoss(),
+
+            # Disable internal logging to avoid 'add_figure' compatibility issues
             log_interval=0,
+
             reduce_on_plateau_patience=4,
         )
 
@@ -51,7 +58,9 @@ class TFTModelBuilder:
         if self.model:
             params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
             print("--- Model Architecture Summary ---")
-            print(f" --> Hidden Size: {self.model.hparams.hidden_size}")
-            print(f" --> Attention Heads: {self.model.hparams.attention_head_size}")
-            print(f" --> Trainable Parameters: {params:,}")
-            print(f" --> Loss Function: QuantileLoss (Probabilistic)")
+            print(f" > Hidden Size: {self.model.hparams.hidden_size}")
+            print(f" > Attention Heads: {self.model.hparams.attention_head_size}")
+            print(f" > Learning Rate: {self.model.hparams.learning_rate}")
+            print(f" > Dropout Rate: {self.model.hparams.dropout}")
+            print(f" > Trainable Parameters: {params:,}")
+            print(f" > Loss Function: QuantileLoss (Probabilistic)")

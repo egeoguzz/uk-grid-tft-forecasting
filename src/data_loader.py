@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import glob
 from pytorch_forecasting import TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.data.encoders import NaNLabelEncoder
@@ -9,66 +10,73 @@ import os
 class UKEnergyLoader:
     """
     Data ingestion and preprocessing module for UK Energy Demand forecasting.
-    Handles data loading, feature engineering, and TimeSeriesDataSet creation.
+    Capable of merging multiple CSV files (e.g., yearly data) into a single dataset.
     """
 
-    def __init__(self, file_path="data/raw/demanddata_2025.csv"):
-        self.file_path = os.path.join(os.getcwd(), file_path)
+    def __init__(self, data_dir="data/raw"):
+        # We look for the directory, not a specific file
+        self.data_dir = os.path.join(os.getcwd(), data_dir)
         self.data = None
 
     def process_data(self) -> pd.DataFrame:
         """
-        Loads raw CSV data and performs feature engineering.
-
-        Returns:
-            pd.DataFrame: Processed dataframe with time index and engineered features.
+        Loads ALL CSV files from the raw directory, merges them, and performs feature engineering.
         """
-        if not os.path.exists(self.file_path):
-            raise FileNotFoundError(f"File not found: {self.file_path}")
+        if not os.path.exists(self.data_dir):
+            raise FileNotFoundError(f"Directory not found: {self.data_dir}")
 
-        print(f"[INFO] Loading data from {self.file_path}...")
-        df = pd.read_csv(self.file_path)
+        # Find all CSV files in the directory
+        csv_files = glob.glob(os.path.join(self.data_dir, "*.csv"))
+
+        if not csv_files:
+            raise FileNotFoundError(f"No CSV files found in {self.data_dir}")
+
+        print(f"[INFO] Found {len(csv_files)} data files. Loading and merging...")
+
+        # Load and concat all files
+        df_list = []
+        for file in csv_files:
+            print(f"   > Loading: {os.path.basename(file)}")
+            try:
+                temp_df = pd.read_csv(file)
+                df_list.append(temp_df)
+            except Exception as e:
+                print(f"   [WARNING] Could not read {file}: {e}")
+
+        if not df_list:
+            raise ValueError("No valid data loaded.")
+
+        df = pd.concat(df_list, ignore_index=True)
+        print(f"[INFO] Merged Raw Data Shape: {df.shape}")
 
         # 1. Standardize Date Format
         df['date'] = pd.to_datetime(df['SETTLEMENT_DATE'])
 
-        # 2. Time Index Creation
-        # Sort by date and period to ensure correct time sequence
-        df = df.sort_values(['date', 'SETTLEMENT_PERIOD']).reset_index(drop=True)
+        # 2. Sort and Deduplicate
+        # Critical: When merging files, ensure time is sorted and no overlaps exist
+        df = df.sort_values(['date', 'SETTLEMENT_PERIOD']).drop_duplicates(
+            subset=['date', 'SETTLEMENT_PERIOD']).reset_index(drop=True)
+
+        # 3. Create Continuous Time Index
         df['time_idx'] = df.index
 
-        # 3. Feature Engineering
-        # Extract temporal features to capture seasonality
+        # 4. Feature Engineering
         df['month'] = df['date'].dt.month.astype(str).astype("category")
         df['day_of_week'] = df['date'].dt.dayofweek.astype(str).astype("category")
         df['hour'] = ((df['SETTLEMENT_PERIOD'] - 1) / 2).astype(int).astype(str).astype("category")
 
-        # Log transformation to stabilize variance in demand
         df['log_ND'] = np.log1p(df['ND'])
-        # Static Group ID for single-series handling
         df['group_id'] = 'UK'
-        # Ensure target variable is float
         df['ND'] = df['ND'].astype(float)
 
         self.data = df
-        print(f"[INFO] Data processed successfully. Shape: {df.shape}")
+        print(f"[INFO] Final Processed Data Shape: {df.shape}")
         return df
 
     def get_dataset(self, max_prediction_length=48) -> TimeSeriesDataSet:
-        """
-        Converts the pandas DataFrame into a PyTorch Forecasting TimeSeriesDataSet.
-
-        Args:
-            max_prediction_length (int): Forecast horizon (default: 48 periods / 24 hours).
-
-        Returns:
-            TimeSeriesDataSet: The configured dataset for training.
-        """
         if self.data is None:
             self.process_data()
 
-        # Define the TimeSeriesDataSet
-        # We use NaNLabelEncoder to handle potentially unseen categories during validation/inference
         training = TimeSeriesDataSet(
             self.data[lambda x: x.time_idx < x.time_idx.max() - max_prediction_length],
             time_idx="time_idx",
@@ -90,7 +98,6 @@ class UKEnergyLoader:
                 "IFA_FLOW"
             ],
 
-            # Robust encoder configuration for production stability
             categorical_encoders={
                 "month": NaNLabelEncoder(add_nan=True),
                 "day_of_week": NaNLabelEncoder(add_nan=True),
