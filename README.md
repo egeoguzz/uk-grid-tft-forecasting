@@ -11,8 +11,6 @@ Traditional forecasting models often struggle with the non-linear dependencies i
 1.  **Quantify Uncertainty:** Instead of single-point predictions, the model outputs prediction intervals (quantiles), allowing for better risk assessment in grid management.
 2.  **Explain Decisions:** The model leverages attention mechanisms to identify which variables (e.g., wind generation vs. time of day) are driving the forecast at any given step.
 
-> **Note regarding portfolio:** This repository represents my work in deep learning research and time-series analysis. For examples of my production-ready consumer software and mobile applications, please refer to my **App Store Portfolio**: [LINK_TO_YOUR_APPS]
-
 ## Methodology
 
 ### Data Pipeline
