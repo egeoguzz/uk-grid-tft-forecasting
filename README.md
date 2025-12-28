@@ -24,7 +24,7 @@ The objective is to provide uncertainty estimates (quantiles) for grid stability
 Validation was performed on a hold-out set (last 4 weeks of the dataset).
 
 ![Forecast Plot](results/forecast_result.png)
-*Figure 1: Validation predictions vs. observed demand. The model captures daily seasonality and peak load hours effectively.*
+*Figure: Validation predictions vs. observed demand. The model captures daily seasonality and peak load hours effectively.*
 
 ### Interpretability Analysis
 
