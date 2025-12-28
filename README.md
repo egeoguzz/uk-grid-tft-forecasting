@@ -1,46 +1,60 @@
 # UK National Grid Demand Forecasting (TFT)
 
-![Python](https://img.shields.io/badge/Python-3.9-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-Forecasting-red)
-![License](https://img.shields.io/badge/License-MIT-green)
+This repository implements a deep learning approach to forecast UK electricity demand using the **Temporal Fusion Transformer (TFT)** architecture.
 
-## Overview
+The project focuses on **probabilistic forecasting** and **interpretability**, addressing the challenges of grid stability in the context of renewable energy integration.
 
-This repository contains a deep learning pipeline for forecasting UK electricity demand using a **Temporal Fusion Transformer (TFT)**. The model is trained on 2024-2025 National Grid data, incorporating multivariate inputs such as solar/wind generation and interconnector flows (IFA) to generate probabilistic forecasts.
+## Project Scope & Context
 
-The objective is to provide uncertainty estimates (quantiles) for grid stability analysis rather than single-point predictions.
+Traditional forecasting models often struggle with the non-linear dependencies introduced by variable renewable energy sources. This project utilizes the TFT architecture to:
 
-## Key Features
+1.  **Quantify Uncertainty:** Instead of single-point predictions, the model outputs prediction intervals (quantiles), allowing for better risk assessment in grid management.
+2.  **Explain Decisions:** The model leverages attention mechanisms to identify which variables (e.g., wind generation vs. time of day) are driving the forecast at any given step.
 
-* **Model Architecture:** Google's Temporal Fusion Transformer (TFT) for interpretable multi-horizon forecasting.
-* **Data Pipeline:** Merges demand signals with weather-dependent generation (Solar/Wind) and cross-border flows.
-* **Probabilistic Output:** Predicts p10, p50, and p90 quantiles to model demand uncertainty.
-* **Interpretability:** Includes a custom script (`src/interpret_model.py`) to visualize attention weights and variable importance.
+> **Note regarding portfolio:** This repository represents my work in deep learning research and time-series analysis. For examples of my production-ready consumer software and mobile applications, please refer to my **App Store Portfolio**: [LINK_TO_YOUR_APPS]
 
----
+## Methodology
+
+### Data Pipeline
+* **Source:** UK National Grid historical data (merged from raw settlement CSVs).
+* **Preprocessing:** Time-alignment, missing value handling via interpolation, and feature engineering (cyclic time features).
+* **Target:** National Demand (ND).
+
+### Model Configuration
+* **Architecture:** Temporal Fusion Transformer (Google Research).
+* **Framework:** PyTorch Forecasting / PyTorch Lightning.
+* **Loss Function:** Quantile Loss (predicting P10, P50, P90).
+
+### Experiment Design Note
+In this experimental setup, historical `Wind` and `Solar` generation data are treated as *known inputs* for the forecast horizon. This **ex-post analysis** approach is chosen to isolate the direct correlation between renewable generation and grid demand, assuming ideal weather forecasting conditions. In a production environment, these inputs would be replaced by Numerical Weather Prediction (NWP) feeds.
 
 ## Results
 
-Validation was performed on a hold-out set (last 4 weeks of the dataset).
+### 1. Forecast Performance
+The model successfully captures daily seasonality and intra-day volatility. The shaded regions in the plot below represent the confidence intervals, providing a range of probable outcomes rather than a static guess.
 
-![Forecast Plot](results/forecast_result.png)
-*Figure: Validation predictions vs. observed demand. The model captures daily seasonality and peak load hours effectively.*
+![Forecast Visualization](results/forecast_result.png)
 
-### Interpretability Analysis
+### 2. Variable Importance (Interpretability)
+Using the TFT's variable selection network, we can rank the features that influence the model's output.
 
-Feature importance analysis confirms that the model relies on logical dependencies:
+* **Encoder (History):** `Wind Generation` and `Solar Generation` are identified as significant historical drivers.
+* **Decoder (Future):** `Hour of Day` remains the dominant predictor for short-term horizons, reflecting human behavioral patterns.
 
-| Future Drivers (Decoder) | Historical Drivers (Encoder) |
-| :--- | :--- |
-| ![Decoder](results/feature_importance_decoder_variables.png) | ![Encoder](results/feature_importance_encoder_variables.png) |
+| Historical Drivers (Encoder) | Future Drivers (Decoder) |
+| :---: | :---: |
+| ![Encoder Importance](results/feature_importance_encoder_variables.png) | ![Decoder Importance](results/feature_importance_decoder_variables.png) |
 
-* **Decoder:** `hour_of_day` is the dominant factor for short-term horizons.
-* **Encoder:** Recent demand (`ND`) and renewable generation levels (`SOLAR_GENERATION`) heavily influence the forecast context.
+*(Additional analysis artifacts, including attention weights and static variable importance, can be found in the `results/` directory.)*
 
----
+## Installation & Usage
 
-## Setup & Usage
+To reproduce the experiments locally:
 
-### Prerequisites
-* Python 3.9+
-* Virtual environment recommended
+```bash
+# Clone the repository
+git clone [https://github.com/egeoguzz/uk-grid-tft-forecasting.git](https://github.com/egeoguzz/uk-grid-tft-forecasting.git)
+cd uk-grid-tft-forecasting
+
+# Install dependencies
+pip install -r requirements.txt
