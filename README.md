@@ -52,31 +52,4 @@ git clone [https://github.com/egeoguzz/uk-grid-tft-forecasting.git](https://gith
 cd uk-grid-tft-forecasting
 pip install -r requirements.txt
 
-Running the Pipeline
-Training:
-
-Bash
-
-python main.py
-Checkpoints are saved to models/.
-
-Inference (Plotting Forecasts):
-
-Bash
-
-python src/predict.py
-Explainability (Feature Importance):
-
-Bash
-
-python src/interpret_model.py
-Technical Details
-Optimizer: Ranger (RAdam + Lookahead)
-
-Loss Function: Quantile Loss
-
-Input Sequence: 168 hours (1 week history)
-
-Prediction Horizon: 48 hours
-
 Batch Size: 64
